@@ -29,6 +29,7 @@ jobs:
             echo 'void f(){float a[8]={};float b[8]={};for(int i=0;i<8;i++)a[i]+=b[i];}' > /tmp/t.cpp &&
             /usr/local/bin/safe-g++ -mavx2 -O3 -c /tmp/t.cpp -o /tmp/t.o &&
             echo 'AVX2 ymm count in wrapper test:' && objdump -d /tmp/t.o | grep -c ymm || echo 0 &&
+            find /src/ggml /src/src -name '*.h' 2>/dev/null | xargs grep -l 'GGML_ATTRIBUTE_TARGET' | xargs sed -i 's/#define GGML_ATTRIBUTE_TARGET(s).*$/#define GGML_ATTRIBUTE_TARGET(s)/' &&
             cd /src &&
             cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_AVX512=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_COMPILER=/usr/local/bin/safe-gcc -DCMAKE_CXX_COMPILER=/usr/local/bin/safe-g++ &&
             cmake3 --build build --target llama-cli -j\$(nproc)
