@@ -20,7 +20,7 @@ jobs:
           find /etc/yum.repos.d/ -name "CentOS-SCLo*" -exec sed -i 's/^mirrorlist/#mirrorlist/g' {} \;
           find /etc/yum.repos.d/ -name "CentOS-SCLo*" -exec sed -i 's/^#baseurl/baseurl/g' {} \;
       - name: Install build tools
-        run: yum install -y --nogpgcheck devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 git
+        run: yum install -y --nogpgcheck --disablerepo="centos-sclo-*" devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 git
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
