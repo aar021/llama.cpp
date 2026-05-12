@@ -4,30 +4,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: centos:7
     steps:
-      - name: Fix base repos
-        run: |
-          sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
-          sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
-          sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
-      - name: Install SCL
-        run: yum install -y --disablerepo="centos-sclo-*" centos-release-scl
-      - name: Fix SCL repos
-        run: |
-          find /etc/yum.repos.d/ -name "CentOS-SCLo*" -exec sed -i 's/mirror.centos.org/vault.centos.org/g' {} \;
-          find /etc/yum.repos.d/ -name "CentOS-SCLo*" -exec sed -i 's/^mirrorlist/#mirrorlist/g' {} \;
-          find /etc/yum.repos.d/ -name "CentOS-SCLo*" -exec sed -i 's/^#baseurl/baseurl/g' {} \;
-      - name: Install build tools
-        run: yum install -y --nogpgcheck --disablerepo="centos-sclo-*" devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 git
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build
+      - name: Build in CentOS 7 container
         run: |
-          source /opt/rh/devtoolset-11/enable
-          cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_AVX=ON -DBUILD_SHARED_LIBS=OFF
-          cmake3 --build build --target llama-cli -j$(nproc)
+          docker run --rm -v ${{ github.workspace }}:/src centos:7 bash -c "
+            sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            yum install -y --disablerepo='centos-sclo-*' centos-release-scl &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/mirror.centos.org/vault.centos.org/g' &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^mirrorlist/#mirrorlist/g' &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^#baseurl/baseurl/g' &&
+            yum install -y --nogpgcheck --disablerepo='centos-sclo-*' devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 &&
+            source /opt/rh/devtoolset-11/enable &&
+            cd /src &&
+            cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_AVX=ON -DBUILD_SHARED_LIBS=OFF &&
+            cmake3 --build build --target llama-cli -j\$(nproc)
+          "
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
