@@ -14,11 +14,12 @@ jobs:
             sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo &&
             sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo &&
             yum install -y --disablerepo='centos-sclo-*' centos-release-scl &&
+            sed -i 's/enabled=1/enabled=0/' /etc/yum.repos.d/CentOS-SCLo-scl.repo &&
             find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/mirror.centos.org/vault.centos.org/g' &&
             find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^mirrorlist/#mirrorlist/g' &&
             find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^#baseurl/baseurl/g' &&
             yum install -y epel-release &&
-            yum install -y --nogpgcheck --disablerepo=centos-sclo-sclo devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 &&
+            yum install -y --nogpgcheck devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 &&
             source /opt/rh/devtoolset-11/enable &&
             cd /src &&
             cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_AVX=ON -DBUILD_SHARED_LIBS=OFF &&
