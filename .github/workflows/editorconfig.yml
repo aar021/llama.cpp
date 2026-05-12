@@ -1,29 +1,32 @@
-name: EditorConfig Checker
-
+name: Build llama-cli CentOS 7
 on:
-  workflow_dispatch: # allows manual triggering
-    inputs:
-      create_release:
-        description: 'Create new release'
-        required: true
-        type: boolean
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
-  cancel-in-progress: true
-
+  workflow_dispatch:
 jobs:
-  editorconfig:
-    runs-on: ubuntu-slim
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: editorconfig-checker/action-editorconfig-checker@840e866d93b8e032123c23bac69dece044d4d84c # v2.2.0
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build in CentOS 7 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/src centos:7 bash -c "
+            sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo &&
+            yum install -y --disablerepo='centos-sclo-*' centos-release-scl &&
+            sed -i 's/enabled=1/enabled=0/' /etc/yum.repos.d/CentOS-SCLo-scl.repo &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/mirror.centos.org/vault.centos.org/g' &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^mirrorlist/#mirrorlist/g' &&
+            find /etc/yum.repos.d/ -name 'CentOS-SCLo*' | xargs sed -i 's/^#baseurl/baseurl/g' &&
+            yum install -y epel-release &&
+            yum install -y --nogpgcheck devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 &&
+            source /opt/rh/devtoolset-11/enable &&
+            cd /src &&
+            cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_AVX=ON -DGGML_AVX2=OFF -DGGML_FMA=OFF -DGGML_AVX512=OFF -DBUILD_SHARED_LIBS=OFF &&
+            cmake3 --build build --target llama-cli -j\$(nproc)
+          "
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          version: v3.0.3
-      - run: editorconfig-checker
+          name: llama-cli-centos7
+          path: build/bin/llama-cli
