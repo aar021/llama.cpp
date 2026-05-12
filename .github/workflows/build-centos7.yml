@@ -1,0 +1,48 @@
+  name: Build llama-cli CentOS 7
+
+  on:
+    workflow_dispatch:
+
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      container:
+        image: centos:7
+
+      steps:
+        - name: Fix repos
+          run: |
+            sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
+            sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+            sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
+
+        - name: Install SCL
+          run: yum install -y centos-release-scl
+
+        - name: Fix SCL repos
+          run: |
+            sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+            sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+            sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+            sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+            sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+            sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+
+        - name: Install build tools
+          run: yum install -y --nogpgcheck devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3 git
+
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Build
+          run: |
+            source /opt/rh/devtoolset-11/enable
+            cmake3 -B build -DLLAMA_BUILD_TESTS=OFF -DGGML_AVX=ON -DBUILD_SHARED_LIBS=OFF
+            cmake3 --build build --target llama-cli -j$(nproc)
+
+        - name: Upload artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: llama-cli-centos7
+            path: build/bin/llama-cli
+          
